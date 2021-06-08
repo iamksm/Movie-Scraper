@@ -1,0 +1,1 @@
+Link to invite the Bot to your discord server- https://discord.com/api/oauth2/authorize?client_id=830088349980295199&permissions=121856&scope=bot
