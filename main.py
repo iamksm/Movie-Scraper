@@ -18,55 +18,46 @@ async def on_ready():
         status=discord.Status.online,
         activity=discord.Activity(
             type=discord.ActivityType.listening,
-            name="Watching Movies",
+            name="#search movie name",
         ),
     )
     print("Bot's Ready")
 
 
-async def scrapeSite(description, search_results_link):
-    the_movies = discord.utils.get(client.get_all_channels(), name="🎥-movie-request")
+async def scrapeSite(description, search_results_link, channel):
     search_results_html_page = requests.get(search_results_link).text
     search_results_soup = BeautifulSoup(search_results_html_page, 'lxml')
     search_results_movies = search_results_soup.find_all(
         'div', class_='browse-movie-wrap col-xs-10 col-sm-4 col-md-5 col-lg-4')
 
     for movies in grouper(search_results_movies, 10, None):
-        embed = discord.Embed(
-            title='RESULTS FROM YTS!',
-            description=description,
-            color=discord.Colour(0x2eb82e))
-        url = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Logo-YTS.svg/1920px-Logo-YTS.svg.png"
-        embed.set_thumbnail(url=url)
-        for movie in movies:
-            if movie is None:
-                break
-            title = str(
-                movie.find('a', class_='browse-movie-title').text).lower()
-            year = movie.find('div', class_='browse-movie-year').text
-            link = movie.find('a')['href']
-            image = movie.find('img', class_='img-responsive')['src']
-            rating = movie.find('h4', class_='rating').text
-            categories = ', '.join(
-                [el.text for el in movie.select('h4:not(.rating)')])
+      embed = discord.Embed(
+          title='RESULTS FROM YTS!',
+          description=description,
+          color=discord.Colour(0x2eb82e))
+      url = "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4e/Logo-YTS.svg/1920px-Logo-YTS.svg.png"
+      embed.set_thumbnail(url=url)
+      for movie in movies:
+        if movie is None:
+            break
+        title = str(
+            movie.find('a', class_='browse-movie-title').text).lower()
+        year = movie.find('div', class_='browse-movie-year').text
+        link = movie.find('a')['href']
+        image = movie.find('img', class_='img-responsive')['src']
+        rating = movie.find('h4', class_='rating').text
+        categories = ', '.join(
+            [el.text for el in movie.select('h4:not(.rating)')])
+        embed.add_field(
+            name=title.title() + f" | ({year}) | ({rating})",
+            value=link,
+            inline=False,
+        )
+        embed.add_field(name=categories, value="---" * 20)
 
-            # print(f"Title :  {title.capitalize()}\n"
-            #       f"Year : {year}\n"
-            #       f"Link : {link}\n"
-            #       f"rating : {rating}\n"
-            #       f"categories : {categories}\n"
-            #       f"Image : {image}\n"
-            #       )
-            embed.add_field(
-                name=title.title() + f" | ({year}) | ({rating})",
-                value=link,
-                inline=False,
-            )
-            embed.add_field(name=categories, value="---" * 20)
-
-            if (len(search_results_movies) == 1):
-                embed.set_image(url=image)
-        await the_movies.send(embed=embed)
+        if (len(search_results_movies) == 1):
+            embed.set_image(url=image)
+      await channel.send(embed=embed)
 
 
 @client.command()
@@ -76,14 +67,16 @@ async def search(ctx, *args):
     arg = urllib.parse.quote(str(' '.join(local_args['args'])).lower())
     search_results_link = "https://yts.mx/browse-movies/" + arg + "/all/all/0/year/0/all"
     description = 'Movie(s) you searched'
-    await scrapeSite(description, search_results_link)
+    channel = ctx.channel
+    await scrapeSite(description, search_results_link, channel)
 
 
 @client.command()
 async def featured(ctx):
     url = 'https://yts.mx/browse-movies/0/all/all/0/featured/0/all'
     description = 'Featured Movies'
-    await scrapeSite(description, url)
+    channel = ctx.channel
+    await scrapeSite(description, url, channel)
 
 
 keep_alive()
